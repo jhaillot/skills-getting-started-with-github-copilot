@@ -14,25 +14,38 @@ document.addEventListener("DOMContentLoaded", () => {
       activitiesList.innerHTML = "";
 
       // Populate activities list
-      Object.entries(activities).forEach(([name, details]) => {
+      Object.entries(activities).forEach(([id, details]) => {
         const activityCard = document.createElement("div");
         activityCard.className = "activity-card";
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        const participantsHtml = details.participants.length > 0 ? `
+          <p><strong>Participants:</strong></p>
+          <ul class="participants-list">
+            ${details.participants.map(email => `
+              <li>
+                ${email}
+                <button class="delete-btn" data-activity-id="${id}" data-activity-name="${details.name}" data-email="${email}">×</button>
+              </li>
+            `).join('')}
+          </ul>
+        ` : '';
+
         activityCard.innerHTML = `
-          <h4>${name}</h4>
+          <h4>${details.name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          ${participantsHtml}
         `;
 
         activitiesList.appendChild(activityCard);
 
         // Add option to select dropdown
         const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
+        option.value = id;
+        option.textContent = details.name;
         activitySelect.appendChild(option);
       });
     } catch (error) {
@@ -50,9 +63,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+        `/activities/${encodeURIComponent(activity)}/signup`,
         {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
         }
       );
 
@@ -62,6 +77,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh the activities list to show updated participants
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -83,4 +100,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize app
   fetchActivities();
+
+  // Event delegation for delete buttons
+  activitiesList.addEventListener('click', async (event) => {
+    if (event.target.classList.contains('delete-btn')) {
+      const activityId = event.target.dataset.activityId;
+      const activityName = event.target.dataset.activityName;
+      const email = event.target.dataset.email;
+
+      if (confirm(`Are you sure you want to remove ${email} from "${activityName}"?`)) {
+        try {
+          const response = await fetch(
+            `/activities/${encodeURIComponent(activityId)}/participants`,
+            {
+              method: 'DELETE',
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            }
+          );
+
+          if (response.ok) {
+            // Refresh the activities list
+            fetchActivities();
+          } else {
+            const result = await response.json();
+            alert(result.detail || 'Failed to remove participant');
+          }
+        } catch (error) {
+          alert('Failed to remove participant. Please try again.');
+          console.error('Error removing participant:', error);
+        }
+      }
+    }
+  });
 });
