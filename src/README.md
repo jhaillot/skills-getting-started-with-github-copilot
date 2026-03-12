@@ -27,17 +27,21 @@ A super simple FastAPI application that allows students to view and sign up for 
 
 ## API Endpoints
 
-| Method | Endpoint                                                          | Description                                                         |
-| ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
-| GET    | `/activities`                                                     | Get all activities with their details and current participant count |
-| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up for an activity                                             |
+| Method | Endpoint                                                                   | Description                                                         |
+| ------ | --------------------------------------------------------------------------| ------------------------------------------------------------------- |
+| GET    | `/activities`                                                              | Get all activities with their details and current participant count |
+| POST   | `/activities/{activity_id}/signup`                                      | Sign up for an activity (email in JSON body)                      |
+| DELETE | `/activities/{activity_id}/participants`                               | Remove a student from an activity (email in JSON body)             |
 
 ## Data Model
 
 The application uses a simple data model with meaningful identifiers:
 
-1. **Activities** - Uses activity name as identifier:
+1. **Activities** - Uses an internal **ID** as the identifier (the
+   human-readable name is stored in the `name` field). This makes URLs more
+   stable and avoids issues with spaces or changing titles.
 
+   - Name (for display purposes)
    - Description
    - Schedule
    - Maximum number of participants allowed
@@ -48,3 +52,6 @@ The application uses a simple data model with meaningful identifiers:
    - Grade level
 
 All data is stored in memory, which means data will be reset when the server restarts.
+
+> **Privacy note:** email addresses are now sent in the request body rather than
+> query parameters to avoid exposing personal data in logs or browser history.
